@@ -1,21 +1,28 @@
 import { Controller, Get, Post, Put, Delete, Query, Param, Body, HttpCode, HttpStatus, Res } from '@nestjs/common';
 import { BookService } from './book.service';
-import { Book, CreateBookDto, UpdateBookDto } from './book.interface';
-import { IsEnum, IsNumber, Min, Max } from 'class-validator';
+import { CreateBookDto, UpdateBookDto } from './book.interface';
+import { IsInt, IsOptional, IsString, IsEnum, IsNumber, Min, Max } from 'class-validator';
+import { Type } from 'class-transformer';
+
 
 export class GetBooksQueryDto {
-  @IsNumber()
+  @IsOptional()
+  @IsInt()
   @Min(10)
-  @Max(50)
+  @Type(() => Number)
   limit?: number;
 
-  @IsNumber()
+  @IsOptional()
+  @IsInt()
   @Min(1)
+  @Type(() => Number)
   page?: number;
 
+  @IsOptional()
   @IsEnum(['id','title','author','publishedDate'])
   sortBy?: string;
 
+  @IsOptional()
   @IsEnum(['asc', 'desc'])
   order?: string; 
 }
@@ -38,8 +45,8 @@ export class BookController {
   */
   @Post("/")
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() book: CreateBookDto) {
-    this.bookService.create(book)
+  async create(@Body() book: CreateBookDto) {
+    await this.bookService.create(book)
     return "Created book details."
   }
 
@@ -50,14 +57,15 @@ export class BookController {
    */
   @Get("/")
   @HttpCode(HttpStatus.OK)
-  findAll(@Query() queryParams: GetBooksQueryDto) {
+  async findAll(@Query() queryParams: GetBooksQueryDto) {
     const page = queryParams?.page ?? 1 
     const limit = queryParams?.limit ?? 10
     const sortBy = queryParams?.sortBy ?? "id" 
     const order = queryParams?.order ?? "asc" 
+    const books = await this.bookService.findAll(page, limit, sortBy, order);
 
     return {
-      'books': this.bookService.findAll(page, limit, sortBy, order),
+      'books': books,
       'page': page,
       'limit': limit
     };

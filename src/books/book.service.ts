@@ -1,85 +1,43 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Book } from './book.entity';
 import {
-  Book,
   CreateBookDto,
   UpdateBookDto,
 } from './book.interface';
 
-interface SortFn<T, K extends keyof T> {
-  (a: T, b: T, key: K): number;
-}
-
-function compareBy<T, K extends keyof T>(key: K, ascendingOrder: boolean): SortFn<T, K> {
-  return (a: T, b: T) => {
-    const valueA = a[key];
-    const valueB = b[key];
-
-    if (typeof valueA === 'string' && typeof valueB == 'string') {
-      return ascendingOrder ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA); 
-    } else if (typeof valueA === 'number' && typeof valueB === 'number') {
-        return ascendingOrder ? valueA - valueB : valueB - valueA;
-    } else {
-      return 0;
-    }
-  };
-}
-
-const sorterFuncMapper = (ascendingOrder: boolean)=>{
-    return new Map<string, Function>([
-        // ['id', compareBy<Book, 'id'>('id')],
-        ['title', compareBy<Book, 'title'>('title', ascendingOrder)],
-        ['author', compareBy<Book, 'author'>('author', ascendingOrder)],
-        ['publishedDate', compareBy<Book, 'publishedDate'>('publishedDate', ascendingOrder)],
-      ])
-};
-
-function generateRandomId(): string {
-  const randomPart = Math.random().toString(36).substring(2, 15);
-  const timestampPart = Date.now().toString(36).substring(2);
-  return randomPart + timestampPart;
-}
 
 @Injectable()
 export class BookService {
-  private books: Book[] = [];
+  constructor(
+    @InjectRepository(Book)
+    private bookRepository: Repository<Book>,
+  ) {}
 
-  findAll(page: number, limit: number, sortBy: string, order: string): Book[] {
-    const mapper = sorterFuncMapper(order == "asc")
-    var sorterFunc = mapper.get(sortBy) || compareBy<Book, 'id'>('id', true);
-    const sortedBooks = [...this.books].sort(
-      sorterFunc as (a: Book, b: Book) => number,
-    );
-    var offset = limit * (page - 1);
-    return sortedBooks.slice(offset, offset + limit);
+  findAll(page: number, limit: number, sortBy: string, order: string): Promise<Book[]> {
+    var offset = limit * (page - 1)
+    return this.bookRepository.find({
+      order: { [sortBy]: order.localeCompare('asc') ? "ASC" : "DESC" },
+      skip: offset,
+      take: limit
+    });
   }
 
-  findOne(id: string): Book | void {
-    return this.books.find((_book: Book) => _book.id == id);
+  findOne(id: string): Promise<Book| null> {
+    return this.bookRepository.findOne({ where: { id: id } });
   }
 
-  create(book: CreateBookDto): void {
-    this.books.push({ id: generateRandomId(), ...book  });
+  create(book: CreateBookDto): Promise<any> {
+    return this.bookRepository.save(book)
+    
   }
 
-  update(id: string, book: UpdateBookDto): void {
-    var bookIndex: string | number = this.books.findIndex(
-      (_book: Book) => _book.id == id,
-    );
-
-    if (bookIndex == -1) {
-      return;
-    }
-    var currBook = this.books[bookIndex];
-
-    currBook.title = book.title ?? currBook.title;
-    currBook.photoUrl = book.photoUrl ?? currBook.photoUrl;
-    currBook.author = book.author ?? currBook.author;
-    currBook.publishedDate = book.publishedDate ?? currBook.publishedDate;
-    currBook.isbn = book.isbn ?? currBook.isbn;
-    currBook.summary = book.summary ?? currBook.summary;
+  update(id: string, book: UpdateBookDto): Promise<any> {
+    return this.bookRepository.update(id, book);
   }
 
-  delete(id: string): void {
-    this.books = this.books.filter((_book: Book) => _book.id != id);
+  delete(id: string): Promise<any> {
+    return this.bookRepository.delete(id);
   }
 }
