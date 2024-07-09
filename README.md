@@ -1,39 +1,47 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# BookBarn
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A Nest.js Project made for creating a book repository.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
+  You can act as two types of users:
+  - Admin
+  - User
 
-## Description
+  Admin can do following things:
+  - Create Books
+  - Update Books
+  - Get List of Books
+  - Get a Book by its Id
+  - Delete Books
+  - Approve Borrow Request
+  - Reject Borrow Request
+
+  User can do following:
+  - Get List of Books
+  - Get a Book by its Id
+  - Make a borrow request for a book
+  - Return a book that they have borrowed
 
 
-  A Nest.js Project made for creating a book repository.
+## Getting Started
+Prerequisites:
 
-## Installation
+- Node.js (https://nodejs.org/en)
+- npm (https://nodejs.org/en/learn/getting-started/an-introduction-to-the-npm-package-manager) (or yarn)
+- Postgres Database (https://www.postgresql.org/)
+
+Note: Create the .env for your project using the .env.example.
+
+## Installation:
 
 ```bash
-$ yarn install
+git clone https://github.com/Shahrukh98/book-barn.git
+cd book-barn
+npm install  # or yarn
 ```
 
 ## Running the app
+Use the development mode for running the code locally and use the provided postman collection for guidance.
 
 ```bash
 # development
@@ -46,29 +54,37 @@ $ yarn run start:dev
 $ yarn run start:prod
 ```
 
-## Test
+### Auth
+To use the app, you need to be user of the app. So using the Auth Endpoints, become a user or admin.
 
-```bash
-# unit tests
-$ yarn run test
+## API Endpoints
 
-# e2e tests
-$ yarn run test:e2e
+This application exposes several RESTful API endpoints for interacting with its functionalities. You can explore the [postman collection](https://app.getpostman.com/join-team?invite_code=70a520ffa4092476a5d5dbb0481e5882&target_code=9a0a9293a7bfd95e9babd577f2afc9da) here and use it 
+Here's a summary of the key endpoints:
 
-# test coverage
-$ yarn run test:cov
-```
+### Auth Endpoints
 
-## Support
+| Endpoint        | Method | Description      |
+| --------------- | ------ | ---------------- |
+| /auth/register  |  POST  | Registers a user |
+| /auth/login     |  POST  | Logins a user    |
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+The rest of the routes are protected and can only be accessed when a bearer token is added to the Authorization Header of the request.
 
-## Stay in touch
+### Protected Endpoints
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+All of the endpoints for the book resource are protected. Some are reserved for only users, while some are reserved for admin. Listing the books, together or individually is allowed for both user and admin.
 
-## License
+| Endpoint                   | Method | Description                     | Allowed To  |
+| -------------------------- | ------ | ------------------------------- | ----------- |
+| /books                     |  GET   | Gets all the books              | User, Admin |
+| /books/:id                 |  GET   | Gets a book of given id         | User, Admin |
+| /books                     |  POST  | Creates a new book              | Admin       |
+| /books/:id                 |  PUT   | Updates the book of given id    | Admin       |
+| /books/:id                 | DELETE | Deletes the book of given id    | Admin       |
+| /books/borrow/:id          |  POST  | Creates borrow request for book | User        |
+| /books/return/:id          |  POST  | Returns the book                | User        |
+| /books/approve/:requestId  |  POST  | Creates borrow request for book | Admin       |
+| /books/reject/:requestId   |  POST  | Returns the book                | Admin       |
 
-Nest is [MIT licensed](LICENSE).
+

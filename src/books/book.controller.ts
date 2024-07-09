@@ -1,16 +1,30 @@
-import { Controller, Get, Post, Put, Delete, Query, Param, Body, HttpCode, HttpStatus, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Query,
+  Param,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+  SetMetadata,
+  Req,
+} from '@nestjs/common';
 import { BookService } from './book.service';
-import { CreateBookDto, UpdateBookDto } from './book.interface';
-import { IsInt, IsOptional, IsString, IsEnum, IsNumber, Min, Max } from 'class-validator';
+import { CreateBookDto, UpdateBookDto } from './book.entity';
+import { IsInt, IsOptional, IsEnum, Min, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
-
+import { AuthortizedRequest, RolesGuard, UserRole } from '../auth/auth.guard';
 
 export class GetBooksQueryDto {
   @IsOptional()
   @IsInt()
   @Min(10)
   @Type(() => Number)
-  limit?: number;
+  pageSize?: number;
 
   @IsOptional()
   @IsInt()
@@ -19,93 +33,134 @@ export class GetBooksQueryDto {
   page?: number;
 
   @IsOptional()
-  @IsEnum(['id','title','author','publishedDate'])
+  @IsEnum(['id', 'title', 'author', 'publishedDate'])
   sortBy?: string;
 
   @IsOptional()
   @IsEnum(['asc', 'desc'])
-  order?: string; 
+  sortDirection?: string;
 }
 
-// GET /books
-// GET /books/[id]
-// POST /books
-// PUT /books/[id]
-// DELETE /books/[id]
+class CreateBookBody implements CreateBookDto {
+  @IsString()
+  title: string;
+  @IsString()
+  photoUrl: string;
+  @IsString()
+  author: string;
+  @IsString()
+  publishedDate: string;
+  @IsString()
+  isbn: string;
+  @IsString()
+  summary: string;
+}
 
-@Controller("/books")
+class BorrowRequestBody {
+  @IsInt()
+  @Min(5)
+  numberOfDays: number;
+}
+
+// GET /books user, admin
+// GET /books/[id] user, admin
+// POST /books admin
+// PUT /books/[id]  admin
+// DELETE /books/[id]  admin
+
+// POST /books/borrow/[id] user
+// POST /books/return/[id] user
+// POST /books/approve/[requestId] admin
+// POST /books/reject/[id] admin
+
+@Controller('/books')
 export class BookController {
   constructor(private readonly bookService: BookService) {}
 
-
-  /**
-   * Create a new book.
-   * @body CreateBookDto (CreateBookDto)
-   * @returns 
-  */
-  @Post("/")
+  @UseGuards(RolesGuard)
+  @SetMetadata('roles', [UserRole.Admin])
+  @Post('/')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() book: CreateBookDto) {
-    await this.bookService.create(book)
-    return "Created book details."
+  async create(@Body() book: CreateBookBody) {
+    return await this.bookService.create(book);
   }
 
-  /**
-   * Retrieve a list of books.
-   * @query queryParams  { page: number, limit: number, sortBy: string, order: "asc" | "desc"}
-   * @returns 
-   */
-  @Get("/")
+  @UseGuards(RolesGuard)
+  @SetMetadata('roles', [UserRole.User, UserRole.Admin])
+  @Get('/')
   @HttpCode(HttpStatus.OK)
   async findAll(@Query() queryParams: GetBooksQueryDto) {
-    const page = queryParams?.page ?? 1 
-    const limit = queryParams?.limit ?? 10
-    const sortBy = queryParams?.sortBy ?? "id" 
-    const order = queryParams?.order ?? "asc" 
-    const books = await this.bookService.findAll(page, limit, sortBy, order);
-
-    return {
-      'books': books,
-      'page': page,
-      'limit': limit
-    };
+    const page = queryParams?.page ?? 1;
+    const pageSize = queryParams?.pageSize ?? 10;
+    const sortBy = queryParams?.sortBy ?? 'id';
+    const sortDirection = queryParams?.sortDirection ?? 'asc';
+    return this.bookService.findAll(page, pageSize, sortBy, sortDirection);
   }
 
-  /**
-   * Retrieve a specific book by ID.
-   * @param id Id of the book to find
-   * @returns 
-   */
-  @Get("/:id")
+  @UseGuards(RolesGuard)
+  @SetMetadata('roles', [UserRole.User, UserRole.Admin])
+  @Get('/:id')
   @HttpCode(HttpStatus.OK)
-  findOne(@Param('id') id: string ) {
-    return this.bookService.findOne(id);
+  async findOne(@Param('id') id: string) {
+    return await this.bookService.findOne(id);
   }
 
-  /**
-   * Update an existing book by ID.
-   * @param id Id of the book to update
-   * @body UpdateBookDto (UpdateBookDto)
-   * @returns 
-   */
-  @Put("/:id")
+  @UseGuards(RolesGuard)
+  @SetMetadata('roles', [UserRole.Admin])
+  @Put('/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   update(@Param('id') id: string, @Body() updateBookDto: UpdateBookDto) {
-    this.bookService.update(id, updateBookDto)
-    return "Updated book details." // With 204, we are not supposed to return any content. The string is used for testing
+    return this.bookService.update(id, updateBookDto);
   }
 
-  /**
-   * Delete a book by ID.
-   * @param id Id of the book to delete
-   * @returns 
-   */
-  @Delete("/:id")
-  @HttpCode(HttpStatus.NO_CONTENT)
-  delete(@Param('id') id: string){
-    this.bookService.delete(id)
-    return "Book Deleted!" // With 204, we are not supposed to return any content. The string is used for testing
+  @UseGuards(RolesGuard)
+  @SetMetadata('roles', [UserRole.Admin])
+  @Delete('/:id')
+  @HttpCode(HttpStatus.OK)
+  async delete(@Param('id') id: string) {
+    return await this.bookService.delete(id);
   }
 
+  @UseGuards(RolesGuard)
+  @SetMetadata('roles', [UserRole.User])
+  @Post('/borrow/:id')
+  @HttpCode(HttpStatus.OK)
+  async makeBorrowRequest(
+    @Param('id') id: string,
+    @Req() request: AuthortizedRequest,
+    @Body() body: BorrowRequestBody,
+  ) {
+    return await this.bookService.makeBorrowRequest(
+      id,
+      request.user.id,
+      body.numberOfDays,
+    );
+  }
+
+  @UseGuards(RolesGuard)
+  @SetMetadata('roles', [UserRole.User])
+  @Post('/return/:id')
+  @HttpCode(HttpStatus.OK)
+  async returnBook(
+    @Param('id') id: string,
+    @Req() request: AuthortizedRequest,
+  ) {
+    return await this.bookService.returnBook(id, request.user.id);
+  }
+
+  @UseGuards(RolesGuard)
+  @SetMetadata('roles', [UserRole.Admin])
+  @Post('/approve/:requestId')
+  @HttpCode(HttpStatus.OK)
+  async approveBorrowRequest(@Param('requestId') requestId: string) {
+    return await this.bookService.approveBorrowRequest(requestId);
+  }
+
+  @UseGuards(RolesGuard)
+  @SetMetadata('roles', [UserRole.Admin])
+  @Post('/reject/:requestId')
+  @HttpCode(HttpStatus.OK)
+  async rejectBorrowRequest(@Param('requestId') requestId: string) {
+    return await this.bookService.rejectBorrowRequest(requestId);
+  }
 }
-
