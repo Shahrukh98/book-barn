@@ -1,3 +1,6 @@
+import { Request } from 'express';
+import { ConfigService } from '@nestjs/config';
+import { Reflector } from '@nestjs/core';
 import {
   CanActivate,
   ExecutionContext,
@@ -6,9 +9,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { jwtConstants } from './constants';
-import { Request } from 'express';
-import { Reflector } from '@nestjs/core';
+
 import { Users } from '../users/users.entity';
 
 const IS_PUBLIC_KEY = 'isPublic';
@@ -20,7 +21,7 @@ export enum UserRole {
   User = 'user',
 }
 
-export interface AuthortizedRequest extends Request {
+export interface AuthorizedRequest extends Request {
   user: Users;
 }
 
@@ -29,6 +30,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
     private reflector: Reflector,
+    private configService: ConfigService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -40,14 +42,14 @@ export class AuthGuard implements CanActivate {
       return true;
     }
 
-    const request: AuthortizedRequest = context.switchToHttp().getRequest();
+    const request: AuthorizedRequest = context.switchToHttp().getRequest();
     const token: string | undefined = this.extractTokenFromHeader(request);
     if (!token) {
       throw new UnauthorizedException();
     }
     try {
       const payload = await this.jwtService.verifyAsync(token, {
-        secret: jwtConstants.secret,
+        secret: this.configService.get<string>("JWT_SECRET"),
       });
 
       request.user = payload;

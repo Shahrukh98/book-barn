@@ -1,3 +1,4 @@
+import * as moment from 'moment';
 import {
   BadRequestException,
   ConflictException,
@@ -6,15 +7,16 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
 import { Book, BorrowRequest, BorrowRequestStatus } from './book.entity';
-import { CreateBookDto, UpdateBookDto } from './book.entity';
-import * as moment from 'moment';
+import { CreateBook, CreateBorrowRequest, UpdateBook } from './book.interface';
 
 @Injectable()
 export class BookService {
   constructor(
     @InjectRepository(Book)
     private bookRepository: Repository<Book>,
+    
     @InjectRepository(BorrowRequest)
     private borrowRepository: Repository<BorrowRequest>,
   ) {}
@@ -40,31 +42,38 @@ export class BookService {
   async findOne(id: string): Promise<Book> {
     const book = await this.bookRepository.findOne({ where: { id: id } });
     if (!book) {
-      throw new NotFoundException();
+      throw new NotFoundException('Invalid Book ID!');
     }
 
     return book;
   }
 
-  async create(book: CreateBookDto): Promise<string> {
+  async create(book: CreateBook): Promise<string> {
     const newBook: Book = await this.bookRepository.save(book);
     return newBook?.id;
   }
 
-  async update(id: string, bookUpdate: UpdateBookDto): Promise<void> {
+  async update(id: string, bookUpdate: UpdateBook): Promise<void> {
     const book = await this.bookRepository.findOne({ where: { id: id } });
     if (!book) {
-      throw new NotFoundException();
+      throw new NotFoundException('Invalid Book ID!');
     }
 
-    await this.bookRepository.update(id, bookUpdate);
+    book.title = bookUpdate?.title ?? book.title
+    book.photoUrl = bookUpdate?.photoUrl ?? book.photoUrl
+    book.author = bookUpdate?.author ?? book.author
+    book.publishedDate = bookUpdate?.publishedDate ?? book.publishedDate
+    book.isbn = bookUpdate?.isbn ?? book.isbn
+    book.summary = bookUpdate?.summary ?? book.summary
+    
+    await this.bookRepository.update(id, book);
     return;
   }
 
   async delete(id: string): Promise<string> {
     const book = await this.bookRepository.findOne({ where: { id: id } });
     if (!book) {
-      throw new NotFoundException();
+      throw new NotFoundException('Invalid Book ID!');
     }
 
     const pendingRequests = await this.borrowRepository.find({
@@ -96,38 +105,42 @@ export class BookService {
     userId: string,
     numberOfDays: number,
   ): Promise<string> {
-    const book = await this.bookRepository.findOne({ where: { id: bookId } });
-    if (!book) {
-      throw new NotFoundException();
+    try {
+      const book = await this.bookRepository.findOne({ where: { id: bookId } });
+      if (!book) {
+        throw new NotFoundException();
+      }
+
+      const borrowRequest: BorrowRequest | null =
+        await this.borrowRepository.findOne({
+          where: {
+            user: { id: userId },
+            book: { id: bookId },
+            status: BorrowRequestStatus.Pending,
+          },
+        });
+
+      if (borrowRequest) {
+        throw new BadRequestException(
+          'You already have a pending request for this book!',
+        );
+      }
+
+      const newRequest = await this.borrowRepository.save({
+        book: bookId,
+        user: userId,
+        numberOfDays: numberOfDays,
+      } as CreateBorrowRequest);
+      return newRequest?.id;
+    } catch (error) {
+      throw new BadRequestException(error.message);
     }
-
-    const borrowRequest: BorrowRequest | null =
-      await this.borrowRepository.findOne({
-        where: {
-          user: { id: userId },
-          book: { id: bookId },
-          status: BorrowRequestStatus.Pending,
-        },
-      });
-
-    if (borrowRequest) {
-      throw new BadRequestException(
-        'You already have a pending request for this book!',
-      );
-    }
-
-    const newRequest = await this.borrowRepository.save({
-      book: bookId,
-      user: userId,
-      numberOfDays: numberOfDays,
-    } as unknown as BorrowRequest);
-    return newRequest?.id;
   }
 
   async returnBook(bookId: string, userId: string): Promise<string> {
     const book = await this.bookRepository.findOne({ where: { id: bookId } });
     if (!book) {
-      throw new NotFoundException();
+      throw new NotFoundException('Invalid Book ID!');
     }
 
     const borrowRequest: BorrowRequest | null =
@@ -155,7 +168,7 @@ export class BookService {
       });
 
     if (!borrowRequest) {
-      throw new NotFoundException();
+      throw new NotFoundException('Invalid Borrow Request ID!');
     }
 
     if (borrowRequest && borrowRequest.status != 'pending') {
@@ -186,7 +199,7 @@ export class BookService {
     borrowRequest.status = BorrowRequestStatus.Approved;
     borrowRequest.returned = false;
 
-    await this.borrowRepository.update(requestId, { ...borrowRequest });
+    await this.borrowRepository.update(requestId, borrowRequest);
     return borrowRequest;
   }
 
@@ -195,14 +208,14 @@ export class BookService {
       await this.borrowRepository.findOne({ where: { id: requestId } });
 
     if (!borrowRequest) {
-      throw new NotFoundException();
+      throw new NotFoundException('Invalid Borrow Request ID!');
     }
 
     if (borrowRequest && borrowRequest.status != 'pending') {
       throw new ConflictException('Borrow Request is already processed!');
     }
     borrowRequest.status = BorrowRequestStatus.Rejected;
-    await this.borrowRepository.update(requestId, { ...borrowRequest });
+    await this.borrowRepository.update(requestId, borrowRequest);
 
     return borrowRequest;
   }

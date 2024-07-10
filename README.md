@@ -41,7 +41,10 @@ npm install  # or yarn
 ```
 
 ## Running the app
-Use the development mode for running the code locally and use the provided postman collection for guidance.
+Clone the repository, install the required packages and run the command below:
+
+### Locally on your machine
+Use the development mode for running the code locally and use the provided postman collection for guidance. 
 
 ```bash
 # development
@@ -53,8 +56,27 @@ $ yarn run start:dev
 # production mode
 $ yarn run start:prod
 ```
+Make sure you have .env with all the given variables in the .env.example.
 
-### Auth
+### Containerized App
+To run this app in the container, make sure you have docker-compose installed on your machine
+
+To build the containers for the app, run the following command:
+
+```
+docker-compose build
+```
+To run the container, use the following command (-d flag runs the containers in background. You can see log from docker desktop):
+
+```
+docker-compose up -d
+```
+
+On running succesfully, this will create two containers, one being the Postgres Database container while the other being the Nestjs app. The Nestjs app is exposed to the host port 3000.
+
+Make sure you have .env with all the given variables in the .env.example. Since, the database is a fellow container, the <code>DATABSE_HOST</code> and <code>DATABSE_PORT</code> are fed into the <code>docker-compose.yml</code>, so those variables in .env will be ignored in case of containerized running.
+
+## Auth
 To use the app, you need to be user of the app. So using the Auth Endpoints, become a user or admin.
 
 ## API Endpoints

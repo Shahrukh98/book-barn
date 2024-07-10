@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BookController } from './book.controller';
-import { BookService } from './book.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
+
+import { BookController } from './book.controller';
 import { Book, BorrowRequest } from './book.entity';
+import { BookService } from './book.service';
 
 describe('BookController', () => {
   let controller: BookController;

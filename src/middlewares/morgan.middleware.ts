@@ -1,5 +1,5 @@
-import { Injectable, NestMiddleware } from '@nestjs/common';
 import * as morgan from 'morgan';
+import { Injectable, NestMiddleware } from '@nestjs/common';
 
 const morganFormat = ':method :url :status :res[content-length] - :response-time ms';
 

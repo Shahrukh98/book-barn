@@ -1,16 +1,11 @@
-import { UserRole } from '../auth/auth.guard';
-import { BorrowRequest } from '../books/book.entity';
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 
-export interface CreateUserDto {
-  username: string;
-  email: string;
-  password: string;
-  role: UserRole;
-}
+import { UserRole } from '../auth/auth.guard';
+import { BorrowRequest } from '../books/book.entity';
+import { CreateUser } from './users.interface';
 
 @Entity()
-export class Users implements CreateUserDto {
+export class Users implements CreateUser {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

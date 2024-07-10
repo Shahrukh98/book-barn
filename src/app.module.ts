@@ -4,13 +4,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import { AuthController } from './auth/auth.controller';
 import { BookController } from './books/book.controller';
 import { BooksModule } from './books/book.module';
-import { MorganMiddleware } from './middlewares/morgan.middleware';
 import { Book, BorrowRequest } from './books/book.entity';
-import { AuthModule } from './auth/auth.module';
+import { MorganMiddleware } from './middlewares/morgan.middleware';
 import { Users } from './users/users.entity';
-import { AuthController } from './auth/auth.controller';
 
 @Module({
   imports: [
@@ -44,6 +44,8 @@ export class AppModule implements NestModule {
       .apply(MorganMiddleware)
       .forRoutes(BookController)
       .apply(MorganMiddleware)
-      .forRoutes(AuthController);
+      .forRoutes(AuthController)
+      .apply(MorganMiddleware)
+      .forRoutes(AppController)
   }
 }

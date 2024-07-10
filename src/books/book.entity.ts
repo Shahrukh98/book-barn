@@ -5,28 +5,13 @@ import {
   ManyToOne,
   OneToMany,
 } from 'typeorm';
+
 import { Users } from '../users/users.entity';
+import { CreateBook, CreateBorrowRequest } from './book.interface';
 
-export interface CreateBookDto {
-  title: string;
-  photoUrl: string;
-  author: string;
-  publishedDate: string;
-  isbn: string;
-  summary: string;
-}
-
-export interface UpdateBookDto {
-  title?: string;
-  photoUrl?: string;
-  author?: string;
-  publishedDate?: string;
-  isbn?: string;
-  summary?: string;
-}
 
 @Entity()
-export class Book implements CreateBookDto {
+export class Book implements CreateBook {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -59,14 +44,9 @@ export enum BorrowRequestStatus {
   Approved = 'approved',
   Rejected = 'rejected',
 }
-export interface CreateBorrowRequestDto {
-  book: Book;
-  user: Users;
-  numberOfDays: number;
-}
 
 @Entity()
-export class BorrowRequest implements CreateBorrowRequestDto {
+export class BorrowRequest implements CreateBorrowRequest {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
